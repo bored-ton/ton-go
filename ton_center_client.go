@@ -27,11 +27,13 @@ type baseTonCenterResponse struct {
 	Error string `json:"error"`
 }
 
+// TonCenterClient is the client for toncenter.com HTTP API
 type TonCenterClient struct {
 	url   string
 	token string
 }
 
+// Balance returns a wallet balance in nanotons
 func (t *TonCenterClient) Balance(address string) (balance decimal.Decimal, err error) {
 	var resp struct {
 		baseTonCenterResponse
@@ -48,6 +50,7 @@ func (t *TonCenterClient) Balance(address string) (balance decimal.Decimal, err 
 	return resp.Result, nil
 }
 
+// AddressState represents the state of an address
 func (t *TonCenterClient) AddressState(address string) (string, error) {
 	var resp struct {
 		baseTonCenterResponse
@@ -64,6 +67,7 @@ func (t *TonCenterClient) AddressState(address string) (string, error) {
 	return resp.Result, nil
 }
 
+// PackAddress converts an address from raw to human-readable format
 func (t *TonCenterClient) PackAddress(address string) (string, error) {
 	var resp struct {
 		baseTonCenterResponse
@@ -80,6 +84,7 @@ func (t *TonCenterClient) PackAddress(address string) (string, error) {
 	return resp.Result, nil
 }
 
+// UnpackAddress converts an address from human-readable to raw format
 func (t *TonCenterClient) UnpackAddress(address string) (string, error) {
 	var resp struct {
 		baseTonCenterResponse
@@ -96,6 +101,7 @@ func (t *TonCenterClient) UnpackAddress(address string) (string, error) {
 	return resp.Result, nil
 }
 
+// AddressInformation gets basic information about the address: balance, code, data, last_transaction_id.
 func (t *TonCenterClient) AddressInformation(address string) (AddressInformation, error) {
 	var resp struct {
 		baseTonCenterResponse
@@ -110,6 +116,8 @@ func (t *TonCenterClient) AddressInformation(address string) (AddressInformation
 	return resp.Result, nil
 }
 
+// ExtendedAddressInformation is similar to previous one (AddressInformation) but tries to parse additional information for known contract types.
+// This method is based on tonlib's function getAccountState. For detecting wallets we recommend to use getWalletInformation.
 func (t *TonCenterClient) ExtendedAddressInformation(address string) (ExtendedAddressInformation, error) {
 	var resp struct {
 		baseTonCenterResponse
@@ -126,6 +134,8 @@ func (t *TonCenterClient) ExtendedAddressInformation(address string) (ExtendedAd
 	return resp.Result, nil
 }
 
+// WalletInformation retrieves wallet information. This method parses contract state and currently supports more wallet
+// types than getExtendedAddressInformation: simple wallet, standart wallet, v3 wallet, v4 wallet.
 func (t *TonCenterClient) WalletInformation(address string) (WalletInformation, error) {
 	var resp struct {
 		baseTonCenterResponse
@@ -142,11 +152,18 @@ func (t *TonCenterClient) WalletInformation(address string) (WalletInformation, 
 	return resp.Result, nil
 }
 
+// TransactionsRequestOptions contains options for transactions request
 type TransactionsRequestOptions struct {
-	Limit    int32
-	Lt       int64
-	ToLt     int64
-	Hash     string
+	// Maximum number of transactions in response
+	Limit int32
+	// Logical time of transaction to start with, must be sent with hash
+	Lt int64
+	// Logical time of transaction to finish with (to get tx from lt to to_lt).
+	ToLt int64
+	// Hash of transaction to start with, in base64 or hex encoding , must be sent with lt
+	Hash string
+	// By default a request is processed by any available liteserver.
+	// If archival=true only liteservers with full history are used
 	Archival bool
 }
 
@@ -179,6 +196,7 @@ func (t TransactionsRequestOptions) fillRequest(req *gorequest.SuperAgent) (*gor
 	return req, nil
 }
 
+// Transactions gets transaction history of a given address
 func (t *TonCenterClient) Transactions(address string, options TransactionsRequestOptions) ([]Transaction, error) {
 	type responseData struct {
 		baseTonCenterResponse
@@ -209,10 +227,12 @@ func (t *TonCenterClient) withAuth(req *gorequest.SuperAgent) *gorequest.SuperAg
 	return req
 }
 
+// NewTonCenterAnonimousClient creates new anonymous toncenter HTTP client
 func NewTonCenterAnonimousClient(url string) *TonCenterClient {
 	return NewTonCenterClient(url, "")
 }
 
+// NewTonCenterClient creates new toncenter HTTP client
 func NewTonCenterClient(url string, token string) *TonCenterClient {
 	return &TonCenterClient{
 		url:   url,
