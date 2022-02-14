@@ -11,7 +11,7 @@ Library provides a set of tools for working with TON blockchain.
   - [x] auth
   - [x] accounts
   - [x] blocks
-  - [ ] transactions
+  - [x] transactions
   - [ ] run methods
   - [ ] send
 

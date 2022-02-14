@@ -340,14 +340,14 @@ func (t TransactionsRequestOptions) fillRequest(req *gorequest.SuperAgent) error
 }
 
 // Transactions gets transaction history of a given address
-func (t *TonCenterClient) Transactions(address string, options TransactionsRequestOptions) ([]Transaction, error) {
+func (t *TonCenterClient) Transactions(address string, parameters TransactionsRequestOptions) ([]Transaction, error) {
 	var resp struct {
 		baseTonCenterResponse
 		Result []Transaction `json:"result"`
 	}
 
 	req := t.withAuth(gorequest.New().Get(t.url+"getTransactions")).Param("address", address)
-	if err := options.fillRequest(req); err != nil {
+	if err := parameters.fillRequest(req); err != nil {
 		return nil, err
 	}
 
@@ -396,6 +396,44 @@ func (t *TonCenterClient) BlockHeader(
 	_, _, errs := req.EndStruct(&resp)
 	if err := checkErrors(errs, resp.OK, resp.Error); err != nil {
 		return BlockHeader{}, err
+	}
+
+	return resp.Result, nil
+}
+
+// TryLocateTx needs to locate outcoming transaction of destination address by incoming message
+func (t *TonCenterClient) TryLocateTx(source string, destination string, createdLt int64) (Transaction, error) {
+	var resp struct {
+		baseTonCenterResponse
+		Result Transaction `json:"result"`
+	}
+	_, _, errs := t.withAuth(gorequest.New().Get(t.url+"tryLocateTx")).
+		Param("source", source).
+		Param("destination", destination).
+		Param("created_lt", strconv.FormatInt(createdLt, 10)).
+		EndStruct(&resp)
+
+	if err := checkErrors(errs, resp.OK, resp.Error); err != nil {
+		return Transaction{}, err
+	}
+
+	return resp.Result, nil
+}
+
+// TryLocateSourceTx needs to locate incoming transaction of source address by outcoming message.
+func (t *TonCenterClient) TryLocateSourceTx(source string, destination string, createdLt int64) (Transaction, error) {
+	var resp struct {
+		baseTonCenterResponse
+		Result Transaction `json:"result"`
+	}
+	_, _, errs := t.withAuth(gorequest.New().Get(t.url+"tryLocateSourceTx")).
+		Param("source", source).
+		Param("destination", destination).
+		Param("created_lt", strconv.FormatInt(createdLt, 10)).
+		EndStruct(&resp)
+
+	if err := checkErrors(errs, resp.OK, resp.Error); err != nil {
+		return Transaction{}, err
 	}
 
 	return resp.Result, nil
