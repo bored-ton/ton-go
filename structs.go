@@ -2,12 +2,14 @@ package tongo
 
 import "github.com/shopspring/decimal"
 
+// TonID
 type TonID struct {
 	Type string `json:"@type"`
 	Hash string `json:"hash"`
 	Lt   string `json:"lt"`
 }
 
+// BlockID
 type BlockID struct {
 	Type       string `json:"@type"`
 	Workchaing int32  `json:"workchain"`
@@ -17,6 +19,7 @@ type BlockID struct {
 	FileHash   string `json:"file_hash"`
 }
 
+// Message describes transaction message
 type Message struct {
 	Source      string          `json:"source"`
 	Destination string          `json:"destination"`
@@ -29,11 +32,13 @@ type Message struct {
 	MessageData MessageData     `json:"msg_data"`
 }
 
+// MessageData
 type MessageData struct {
 	Body      string `json:"body"`
 	InitState string `json:"init_state"`
 }
 
+// Transaction
 type Transaction struct {
 	Address       string            `json:"address"`
 	Utime         int64             `json:"utime"`
@@ -46,6 +51,7 @@ type Transaction struct {
 	OtherFees     []decimal.Decimal `json:"other_fees"`
 }
 
+// AddressInformation
 type AddressInformation struct {
 	Type              string          `json:"@type"`
 	Balance           decimal.Decimal `json:"balance"`
@@ -59,17 +65,20 @@ type AddressInformation struct {
 	State             string          `json:"state"`
 }
 
+// ExtendedAddress
 type ExtendedAddress struct {
 	Type    string `json:"@type"`
 	Address string `json:"address"`
 }
 
+// ExtendedAccountState
 type ExtendedAccountState struct {
 	Type     string `json:"@type"`
 	WalledID string `json:"walled_id"`
 	SeqNo    int64  `json:"seqno"`
 }
 
+// ExtendedAddressInformation
 type ExtendedAddressInformation struct {
 	Type              string               `json:"@type"`
 	Address           ExtendedAddress      `json:"address"`
@@ -82,6 +91,7 @@ type ExtendedAddressInformation struct {
 	Extra             string               `json:"@extra"`
 }
 
+// WalletInformation
 type WalletInformation struct {
 	Wallet            bool            `json:"wallet"`
 	Balance           decimal.Decimal `json:"balance"`
