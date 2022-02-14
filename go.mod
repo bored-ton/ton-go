@@ -1,4 +1,4 @@
-module github.com/one-ton-org/ton-go
+module github.com/bored-ton/ton-go
 
 go 1.17
 
