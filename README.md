@@ -10,7 +10,7 @@ Library provides a set of tools for working with TON blockchain.
 - TON Center API client https://toncenter.com/api/v2/
   - [x] auth
   - [x] accounts
-  - [ ] blocks
+  - [x] blocks
   - [ ] transactions
   - [ ] run methods
   - [ ] send

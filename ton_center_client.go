@@ -3,6 +3,7 @@ package tongo
 import (
 	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/parnurzeal/gorequest"
 	"github.com/shopspring/decimal"
@@ -25,6 +26,7 @@ func checkErrors(errs []error, ok bool, errorStr string) error {
 type baseTonCenterResponse struct {
 	OK    bool   `json:"ok"`
 	Error string `json:"error"`
+	Code  int32  `json:"code"`
 }
 
 // TonCenterClient is the client for toncenter.com HTTP API
@@ -134,6 +136,147 @@ func (t *TonCenterClient) ExtendedAddressInformation(address string) (ExtendedAd
 	return resp.Result, nil
 }
 
+// MasterchainInfo returns up-to-date masterchain state
+func (t *TonCenterClient) MasterchainInfo() (MasterchainInfo, error) {
+	var resp struct {
+		baseTonCenterResponse
+		Result MasterchainInfo `json:"result"`
+	}
+	_, _, errs := t.withAuth(gorequest.New().Get(t.url + "getMasterChainInfo")).
+		EndStruct(&resp)
+
+	if err := checkErrors(errs, resp.OK, resp.Error); err != nil {
+		return MasterchainInfo{}, err
+	}
+
+	return resp.Result, nil
+}
+
+// ConsensusBlock consensus block and its update timestamp
+func (t *TonCenterClient) ConsensusBlock() (consensusBlock int64, timestamp float64, err error) {
+	var resp struct {
+		baseTonCenterResponse
+		Result struct {
+			ConsensusBlock int64   `json:"consensus_block_id"`
+			Timestamp      float64 `json:"timestamp"`
+		} `json:"result"`
+	}
+	_, _, errs := t.withAuth(gorequest.New().Get(t.url + "getConsensusBlock")).
+		EndStruct(&resp)
+
+	if err := checkErrors(errs, resp.OK, resp.Error); err != nil {
+		return consensusBlock, timestamp, err
+	}
+
+	return resp.Result.ConsensusBlock, resp.Result.Timestamp, nil
+}
+
+// LookupBlockRequestParameters
+type LookupBlockRequestParameters struct {
+	SeqNo    *int64
+	Lt       int64
+	UnixTime int64
+}
+
+// LookupBlock by either seqno, lt or unix time
+func (t *TonCenterClient) LookupBlock(
+	workchain int32,
+	shard int64,
+	options LookupBlockRequestParameters,
+) (BlockID, error) {
+	var resp struct {
+		baseTonCenterResponse
+		Result BlockID `json:"result"`
+	}
+	req := t.withAuth(gorequest.New().Get(t.url + "lookupBlock"))
+	if options.SeqNo != nil {
+		req.Param("seqno", strconv.FormatInt(*options.SeqNo, 10))
+	}
+	if options.Lt != 0 {
+		req.Param("lt", strconv.FormatInt(options.Lt, 10))
+	}
+	if options.UnixTime != 0 {
+		req.Param("unixtime", strconv.FormatInt(options.UnixTime, 10))
+	}
+
+	_, _, errs := req.EndStruct(&resp)
+	if err := checkErrors(errs, resp.OK, resp.Error); err != nil {
+		return BlockID{}, err
+	}
+
+	return resp.Result, nil
+}
+
+// Shards returns shards information
+func (t *TonCenterClient) Shards(seqno int64) ([]BlockID, error) {
+	var resp struct {
+		baseTonCenterResponse
+		Result []BlockID `json:"result"`
+	}
+	_, _, errs := t.withAuth(gorequest.New().Get(t.url+"shards")).
+		Param("seqno", strconv.FormatInt(seqno, 10)).
+		EndStruct(&resp)
+
+	if err := checkErrors(errs, resp.OK, resp.Error); err != nil {
+		return nil, err
+	}
+
+	return resp.Result, nil
+}
+
+// BlockTransactionsRequestParameters
+type BlockTransactionsRequestParameters struct {
+	RootHash  string
+	FileHash  string
+	AfterLt   int64
+	AfterHash string
+	Count     int32
+}
+
+func (b BlockTransactionsRequestParameters) fillRequest(req *gorequest.SuperAgent) {
+	if b.RootHash != "" {
+		req.Param("root_hash", b.RootHash)
+	}
+	if b.FileHash != "" {
+		req.Param("file_hash", b.FileHash)
+	}
+	if b.AfterLt != 0 {
+		req.Param("after_lt", strconv.FormatInt(b.AfterLt, 10))
+	}
+	if b.AfterHash != "" {
+		req.Param("after_hash", b.AfterHash)
+	}
+	if b.Count != 0 {
+		req.Param("count", strconv.Itoa(int(b.Count)))
+	}
+}
+
+// BlockTransactions returns transactions of the given block
+func (t *TonCenterClient) BlockTransactions(
+	workchain int64,
+	shard int64,
+	seqno int64,
+	parameters BlockTransactionsRequestParameters,
+) ([]BlockID, error) {
+	var resp struct {
+		baseTonCenterResponse
+		Result []BlockID `json:"result"`
+	}
+	req := t.withAuth(gorequest.New().Get(t.url+"blockTransactions")).
+		Param("workchain", strconv.FormatInt(workchain, 10)).
+		Param("shard", strconv.FormatInt(shard, 10)).
+		Param("seqno", strconv.FormatInt(seqno, 10))
+
+	parameters.fillRequest(req)
+
+	_, _, errs := req.EndStruct(&resp)
+	if err := checkErrors(errs, resp.OK, resp.Error); err != nil {
+		return nil, err
+	}
+
+	return resp.Result, nil
+}
+
 // WalletInformation retrieves wallet information. This method parses contract state and currently supports more wallet
 // types than getExtendedAddressInformation: simple wallet, standart wallet, v3 wallet, v4 wallet.
 func (t *TonCenterClient) WalletInformation(address string) (WalletInformation, error) {
@@ -177,46 +320,84 @@ func (t TransactionsRequestOptions) validate() error {
 	return nil
 }
 
-func (t TransactionsRequestOptions) fillRequest(req *gorequest.SuperAgent) (*gorequest.SuperAgent, error) {
+func (t TransactionsRequestOptions) fillRequest(req *gorequest.SuperAgent) error {
 	if err := t.validate(); err != nil {
-		return req, err
+		return err
 	}
 	if t.Limit > 0 {
-		req = req.Param("limit", fmt.Sprintf("%d", t.Limit))
+		req.Param("limit", fmt.Sprintf("%d", t.Limit))
 	}
 	if t.Lt != 0 {
-		req = req.Param("lt", fmt.Sprintf("%d", t.Lt)).Param("hash", t.Hash)
+		req.Param("lt", fmt.Sprintf("%d", t.Lt)).Param("hash", t.Hash)
 	}
 	if t.ToLt != 0 {
-		req = req.Param("to_lt", fmt.Sprintf("%d", t.ToLt))
+		req.Param("to_lt", fmt.Sprintf("%d", t.ToLt))
 	}
 	if t.Archival {
-		req = req.Param("archival", "true")
+		req.Param("archival", "true")
 	}
-	return req, nil
+	return nil
 }
 
 // Transactions gets transaction history of a given address
 func (t *TonCenterClient) Transactions(address string, options TransactionsRequestOptions) ([]Transaction, error) {
-	type responseData struct {
+	var resp struct {
 		baseTonCenterResponse
 		Result []Transaction `json:"result"`
 	}
 
-	var resp responseData
 	req := t.withAuth(gorequest.New().Get(t.url+"getTransactions")).Param("address", address)
-	req, err := options.fillRequest(req)
-	if err != nil {
+	if err := options.fillRequest(req); err != nil {
 		return nil, err
 	}
 
 	_, _, errs := req.EndStruct(&resp)
-	if len(errs) > 0 {
-		return nil, joinErrors(errs)
+	if err := checkErrors(errs, resp.OK, resp.Error); err != nil {
+		return nil, err
 	}
-	if !resp.OK {
-		return nil, fmt.Errorf("reponse status is not ok: %v, error: %s", resp.OK, resp.Error)
+	return resp.Result, nil
+}
+
+// BlockHeaderRequestParameters
+type BlockHeaderRequestParameters struct {
+	RootHash string
+	FileHash string
+}
+
+func (b BlockHeaderRequestParameters) fillRequest(req *gorequest.SuperAgent) {
+	if b.RootHash != "" {
+		req.Param("root_hash", b.RootHash)
 	}
+	if b.FileHash != "" {
+		req.Param("file_hash", b.FileHash)
+	}
+}
+
+// BlockHeader returns metadata of a given block
+func (t *TonCenterClient) BlockHeader(
+	workchain int64,
+	shard int64,
+	seqno int64,
+	parameters BlockHeaderRequestParameters,
+) (BlockHeader, error) {
+	type responseData struct {
+		baseTonCenterResponse
+		Result BlockHeader `json:"result"`
+	}
+
+	var resp responseData
+	req := t.withAuth(gorequest.New().Get(t.url+"getBlockHeader")).
+		Param("workchain", strconv.FormatInt(workchain, 10)).
+		Param("shard", strconv.FormatInt(shard, 10)).
+		Param("seqno", strconv.FormatInt(seqno, 10))
+
+	parameters.fillRequest(req)
+
+	_, _, errs := req.EndStruct(&resp)
+	if err := checkErrors(errs, resp.OK, resp.Error); err != nil {
+		return BlockHeader{}, err
+	}
+
 	return resp.Result, nil
 }
 

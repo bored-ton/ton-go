@@ -101,3 +101,35 @@ type WalletInformation struct {
 	LastTransactionID TonID           `json:"last_transaction_id"`
 	WalletID          uint64          `json:"wallet_id"`
 }
+
+// MasterchainInfo
+type MasterchainInfo struct {
+	Type          string  `json:"@type"`
+	LastBlockID   BlockID `json:"last"`
+	StateRootHash string  `json:"state_root_hash"`
+	InitBlockID   BlockID `json:"init"`
+	Extra         string  `json:"@extra"`
+}
+
+// BlockHeader information
+type BlockHeader struct {
+	Type                   string    `json:"@type"`
+	ID                     BlockID   `json:"id"`
+	GlobalID               int64     `json:"global_id"`
+	Version                int64     `json:"version"`
+	AfterMerge             bool      `json:"after_merge"`
+	AfterSplit             bool      `json:"after_split"`
+	BeforeSplit            bool      `json:"before_split"`
+	WantMerge              bool      `json:"want_merge"`
+	WantSplit              bool      `json:"want_split"`
+	ValidatorListHashShort int64     `json:"validator_list_hash_short"`
+	CatchainSeqNo          int64     `json:"catchain_seqno"`
+	MinRefMcSeqNo          int64     `json:"min_ref_mc_seqno"`
+	IsKeyBlock             bool      `json:"is_key_block"`
+	PrevKeyBlockSeqNo      int64     `json:"prev_key_block_seqno"`
+	StartLt                string    `json:"start_lt"`
+	EndLt                  string    `json:"end_lt"`
+	VertSeqNo              int64     `json:"vert_seqno"`
+	PrevBlocks             []BlockID `json:"prev_blocks"`
+	Extra                  string    `json:"@extra"`
+}
