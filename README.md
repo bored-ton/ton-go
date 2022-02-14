@@ -12,7 +12,7 @@ Library provides a set of tools for working with TON blockchain.
   - [x] accounts
   - [x] blocks
   - [x] transactions
-  - [ ] run methods
+  - [x] run get method
   - [ ] send
 
 ### Example

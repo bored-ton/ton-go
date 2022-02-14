@@ -439,6 +439,29 @@ func (t *TonCenterClient) TryLocateSourceTx(source string, destination string, c
 	return resp.Result, nil
 }
 
+// RunMethodRequest contains parameters for run method request
+type RunMethodRequest struct {
+	Address string     `json:"address"`
+	Method  string     `json:"method"`
+	Stack   [][]string `json:"stack"`
+}
+
+func (t *TonCenterClient) RunGetMethod(request RunMethodRequest) (map[string]interface{}, error) {
+	var resp struct {
+		baseTonCenterResponse
+		Result map[string]interface{} `json:"result"`
+	}
+	_, _, errs := t.withAuth(gorequest.New().Post(t.url + "runGetMethod")).
+		Send(request).
+		EndStruct(&resp)
+
+	if err := checkErrors(errs, resp.OK, resp.Error); err != nil {
+		return nil, err
+	}
+
+	return resp.Result, nil
+}
+
 func (t *TonCenterClient) withAuth(req *gorequest.SuperAgent) *gorequest.SuperAgent {
 	if t.token != "" {
 		return req.Set("X-API-Key", t.token)
