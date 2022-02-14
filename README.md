@@ -1,6 +1,6 @@
 [![GoDoc](https://godoc.org/github.com/bored-ton/ton-go?status.svg)](https://godoc.org/github.com/bored-ton/ton-go)
 
-# TON GO Labrary
+# TON GO
 
 Library provides a set of tools for working with TON blockchain.
 
